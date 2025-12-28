@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import VolvoCarsAPI
 
 /// File-based authentication storage
 ///
