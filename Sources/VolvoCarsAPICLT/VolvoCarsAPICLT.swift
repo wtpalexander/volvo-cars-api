@@ -21,6 +21,7 @@ struct VolvoCarsAPICLT: AsyncParsableCommand {
             ListVehicles.self,
             VehicleDetails.self,
             Odometer.self,
+            Tyres.self,
             Logout.self
         ]
     )
@@ -260,6 +261,79 @@ extension VolvoCarsAPICLT {
                 print()
             } else {
                 print("✗ No odometer data available for this vehicle.")
+            }
+        }
+
+        private func createAuthenticatedClient() async throws -> VolvoCarsAPI {
+            guard let token = try TokenStorage.load() else {
+                print("✗ No saved token found. Please authenticate first.")
+                throw ExitCode.failure
+            }
+
+            let volvo = VolvoCarsAPI(
+                clientID: options.clientID,
+                clientSecret: options.clientSecret,
+                apiKey: options.apiKey,
+                isDebugLoggingEnabled: options.verbose
+            )
+            await volvo.setToken(token)
+            return volvo
+        }
+    }
+}
+
+// MARK: - Tyres Command
+
+extension VolvoCarsAPICLT {
+
+    struct Tyres: AsyncParsableCommand {
+
+        static let configuration = CommandConfiguration(
+            abstract: "Get the tyre status for a specific vehicle."
+        )
+
+        @OptionGroup()
+        var options: Options
+
+        @Argument(help: ArgumentHelp("The VIN of the vehicle."))
+        var vin: String
+
+        func run() async throws {
+            let volvo = try await createAuthenticatedClient()
+            let tyres = try await volvo.getTyres(vin: vin)
+
+            print("\nTyre Status:")
+            print("=" + String(repeating: "=", count: 40))
+            print("\nFront Left:")
+            print("  Status:     \(formatPressureLevel(tyres.frontLeft.value))")
+            print("  Timestamp:  \(tyres.frontLeft.timestamp)")
+
+            print("\nFront Right:")
+            print("  Status:     \(formatPressureLevel(tyres.frontRight.value))")
+            print("  Timestamp:  \(tyres.frontRight.timestamp)")
+
+            print("\nRear Left:")
+            print("  Status:     \(formatPressureLevel(tyres.rearLeft.value))")
+            print("  Timestamp:  \(tyres.rearLeft.timestamp)")
+
+            print("\nRear Right:")
+            print("  Status:     \(formatPressureLevel(tyres.rearRight.value))")
+            print("  Timestamp:  \(tyres.rearRight.timestamp)")
+            print()
+        }
+
+        private func formatPressureLevel(_ level: TyresResponse.TyresData.TyreStatus.PressureLevel) -> String {
+            switch level {
+            case .unspecified:
+                return "Unspecified"
+            case .noWarning:
+                return "✓ No Warning"
+            case .veryLowPressure:
+                return "⚠ Very Low Pressure"
+            case .lowPressure:
+                return "⚠ Low Pressure"
+            case .highPressure:
+                return "⚠ High Pressure"
             }
         }
 

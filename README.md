@@ -8,6 +8,7 @@ A Swift package for accessing the Volvo Connected Car API.
 - List vehicles in your account
 - Get vehicle details
 - Get odometer readings
+- Get tyre pressure status
 
 ## Requirements
 
@@ -104,6 +105,15 @@ The token will be saved to `~/.volvo-cars-api-token.json` and automatically used
   --api-key YOUR_API_KEY
 ```
 
+**Get tyre status:**
+
+```bash
+.build/debug/VolvoCarsAPICLT tyres YOUR_VIN \
+  --client-id YOUR_CLIENT_ID \
+  --client-secret YOUR_CLIENT_SECRET \
+  --api-key YOUR_API_KEY
+```
+
 **Enable verbose logging:**
 
 Add the `--verbose` flag to any command:
@@ -191,12 +201,23 @@ if let odometer = try await volvo.getOdometer(vin: "YV1ABC123DEF45678") {
 }
 ```
 
+### Get Tyre Status
+
+```swift
+let tyres = try await volvo.getTyres(vin: "YV1ABC123DEF45678")
+print("Front Left: \(tyres.frontLeft.value)")
+print("Front Right: \(tyres.frontRight.value)")
+print("Rear Left: \(tyres.rearLeft.value)")
+print("Rear Right: \(tyres.rearRight.value)")
+```
+
 ## OAuth Scopes
 
 The package requests the following default scopes:
 - `openid` - Required for authentication
 - `conve:vehicle_relation` - List vehicles and get vehicle details
 - `conve:odometer_status` - Read odometer values
+- `conve:tyre_status` - Read tyre pressure status
 
 You can customize the scopes when initializing VolvoCarsAPI:
 
@@ -209,6 +230,7 @@ let volvo = VolvoCarsAPI(
         "openid",
         "conve:vehicle_relation",
         "conve:odometer_status",
+        "conve:tyre_status",
         "conve:fuel_status"
     ]
 )

@@ -24,7 +24,7 @@ public final class VolvoCarsAPI: @unchecked Sendable {
     ///   - clientSecret: OAuth2 client secret from Volvo Developer Portal
     ///   - apiKey: VCC API key from Volvo Developer Portal
     ///   - redirectURI: OAuth2 redirect URI (default: volvocars://oauth-callback)
-    ///   - scopes: OAuth2 scopes (default: openid, vehicle_relation, odometer_status)
+    ///   - scopes: OAuth2 scopes (default: openid, vehicle_relation, odometer_status, tyre_status)
     ///   - urlSession: URLSession to use for requests (default: .shared)
     ///   - isDebugLoggingEnabled: Enable debug logging (default: false)
     public init(
@@ -35,7 +35,8 @@ public final class VolvoCarsAPI: @unchecked Sendable {
         scopes: [String] = [
             "openid",
             "conve:vehicle_relation",
-            "conve:odometer_status"
+            "conve:odometer_status",
+            "conve:tyre_status"
         ],
         urlSession: URLSession = .shared,
         isDebugLoggingEnabled: Bool = false
@@ -143,6 +144,25 @@ public final class VolvoCarsAPI: @unchecked Sendable {
         )
 
         return response.data.odometer
+    }
+
+    /// Gets the tyre status for a specific vehicle
+    ///
+    /// Required scopes: openid conve:tyre_status
+    ///
+    /// - Parameter vin: Vehicle Identification Number
+    /// - Returns: Tyre status data for all four tyres
+    public func getTyres(vin: String) async throws -> TyresResponse.TyresData {
+        let url = apiBaseURL.appending(path: "\(connectedVehicleEndpoint)/\(vin)/tyres")
+        var request = URLRequest(url: url)
+        request.allHTTPHeaderFields = try await headers()
+
+        let response: TyresResponse = try await urlSession.object(
+            for: request,
+            isDebugLoggingEnabled: isDebugLoggingEnabled
+        )
+
+        return response.data
     }
 
     // MARK: - Private Helpers
