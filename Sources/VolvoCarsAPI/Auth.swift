@@ -7,25 +7,14 @@
 
 import Foundation
 
-actor TokenStore {
-    private var token: TokenResponse?
-
-    func getToken() -> TokenResponse? {
-        token
-    }
-
-    func setToken(_ newToken: TokenResponse) {
-        token = newToken
-    }
-}
-
 final class Auth {
 
     private let authorizeURL = URL(string: "https://volvoid.eu.volvocars.com/as/authorization.oauth2")!
     private let tokenURL = URL(string: "https://volvoid.eu.volvocars.com/as/token.oauth2")!
 
     private var pkce: PKCE?
-    private let tokenStore = TokenStore()
+    private let authStore: AuthStoring
+    private let storageKey: String
 
     private let clientID: String
     private let clientSecret: String
@@ -44,7 +33,9 @@ final class Auth {
             "conve:odometer_status"
         ],
         urlSession: URLSession,
-        isDebugLoggingEnabled: Bool = false
+        isDebugLoggingEnabled: Bool = false,
+        authStore: AuthStoring? = nil,
+        storageKey: String = "volvo-token"
     ) {
         self.clientID = clientID
         self.clientSecret = clientSecret
@@ -52,6 +43,8 @@ final class Auth {
         self.scopes = scopes
         self.urlSession = urlSession
         self.isDebugLoggingEnabled = isDebugLoggingEnabled
+        self.authStore = authStore ?? InMemoryAuthStore()
+        self.storageKey = storageKey
     }
 
     /// Generates the authorization URL that the user needs to visit to authenticate
@@ -120,7 +113,7 @@ final class Auth {
             isDebugLoggingEnabled: isDebugLoggingEnabled
         )
 
-        await tokenStore.setToken(response)
+        try await authStore.storeAuthentication(token: response, for: storageKey)
 
         if isDebugLoggingEnabled {
             AuthenticationLogger.debug("Token received successfully")
@@ -129,7 +122,7 @@ final class Auth {
 
     /// Refreshes the access token using the refresh token
     func refreshToken() async throws {
-        guard let currentToken = await tokenStore.getToken() else {
+        guard let currentToken = await authStore.authentication(for: storageKey) else {
             throw VolvoAuthError.noTokenAvailable
         }
 
@@ -163,7 +156,7 @@ final class Auth {
             isDebugLoggingEnabled: isDebugLoggingEnabled
         )
 
-        await tokenStore.setToken(response)
+        try await authStore.storeAuthentication(token: response, for: storageKey)
 
         if isDebugLoggingEnabled {
             AuthenticationLogger.debug("Token refreshed successfully")
@@ -172,7 +165,7 @@ final class Auth {
 
     /// Gets a valid access token, refreshing if necessary
     func getAccessToken() async throws -> String {
-        guard let currentToken = await tokenStore.getToken() else {
+        guard let currentToken = await authStore.authentication(for: storageKey) else {
             throw VolvoAuthError.noTokenAvailable
         }
 
@@ -182,7 +175,7 @@ final class Auth {
             try await refreshToken()
         }
 
-        guard let validToken = await tokenStore.getToken() else {
+        guard let validToken = await authStore.authentication(for: storageKey) else {
             throw VolvoAuthError.noTokenAvailable
         }
 
@@ -191,12 +184,12 @@ final class Auth {
 
     /// Sets an existing token (useful for restoring saved tokens)
     func setToken(_ token: TokenResponse) async {
-        await tokenStore.setToken(token)
+        try? await authStore.storeAuthentication(token: token, for: storageKey)
     }
 
     /// Gets the current token (for saving/persistence)
     func getToken() async -> TokenResponse? {
-        await tokenStore.getToken()
+        await authStore.authentication(for: storageKey)
     }
 }
 

@@ -27,6 +27,8 @@ public final class VolvoCarsAPI: @unchecked Sendable {
     ///   - scopes: OAuth2 scopes (default: openid, vehicle_relation, odometer_status, tyre_status)
     ///   - urlSession: URLSession to use for requests (default: .shared)
     ///   - isDebugLoggingEnabled: Enable debug logging (default: false)
+    ///   - authStore: Optional custom authentication storage (default: in-memory storage)
+    ///   - storageKey: Storage key for authentication tokens (default: "volvo-token")
     public init(
         clientID: String,
         clientSecret: String,
@@ -39,7 +41,9 @@ public final class VolvoCarsAPI: @unchecked Sendable {
             "conve:tyre_status"
         ],
         urlSession: URLSession = .shared,
-        isDebugLoggingEnabled: Bool = false
+        isDebugLoggingEnabled: Bool = false,
+        authStore: AuthStoring? = nil,
+        storageKey: String = "volvo-token"
     ) {
         self.auth = Auth(
             clientID: clientID,
@@ -47,7 +51,9 @@ public final class VolvoCarsAPI: @unchecked Sendable {
             redirectURI: redirectURI,
             scopes: scopes,
             urlSession: urlSession,
-            isDebugLoggingEnabled: isDebugLoggingEnabled
+            isDebugLoggingEnabled: isDebugLoggingEnabled,
+            authStore: authStore,
+            storageKey: storageKey
         )
         self.apiKey = apiKey
         self.urlSession = urlSession

@@ -107,21 +107,18 @@ extension VolvoCarsAPICLT {
                 clientID: options.clientID,
                 clientSecret: options.clientSecret,
                 apiKey: options.apiKey,
-                isDebugLoggingEnabled: options.verbose
+                isDebugLoggingEnabled: options.verbose,
+                authStore: FileAuthStore(),
+                storageKey: "volvo-cli-token"
             )
 
             print("Exchanging authorization code for access token...")
 
             try await volvo.authenticate(code: code)
 
-            if let token = await volvo.getToken() {
-                try TokenStorage.save(token)
-                print("✓ Authentication successful!")
-                print("You can now use other commands to interact with your vehicles.")
-            } else {
-                print("✗ Failed to retrieve token")
-                throw ExitCode.failure
-            }
+            print("✓ Authentication successful!")
+            print("Token automatically saved.")
+            print("You can now use other commands to interact with your vehicles.")
         }
     }
 }
@@ -158,7 +155,19 @@ extension VolvoCarsAPICLT {
         }
 
         private func createAuthenticatedClient() async throws -> VolvoCarsAPI {
-            guard let token = try TokenStorage.load() else {
+            let authStore = FileAuthStore()
+
+            let volvo = VolvoCarsAPI(
+                clientID: options.clientID,
+                clientSecret: options.clientSecret,
+                apiKey: options.apiKey,
+                isDebugLoggingEnabled: options.verbose,
+                authStore: authStore,
+                storageKey: "volvo-cli-token"
+            )
+
+            // Check if token exists
+            if await authStore.authentication(for: "volvo-cli-token") == nil {
                 print("""
                 ✗ No saved token found.
 
@@ -170,13 +179,6 @@ extension VolvoCarsAPICLT {
                 throw ExitCode.failure
             }
 
-            let volvo = VolvoCarsAPI(
-                clientID: options.clientID,
-                clientSecret: options.clientSecret,
-                apiKey: options.apiKey,
-                isDebugLoggingEnabled: options.verbose
-            )
-            await volvo.setToken(token)
             return volvo
         }
     }
@@ -215,18 +217,23 @@ extension VolvoCarsAPICLT {
         }
 
         private func createAuthenticatedClient() async throws -> VolvoCarsAPI {
-            guard let token = try TokenStorage.load() else {
-                print("✗ No saved token found. Please authenticate first.")
-                throw ExitCode.failure
-            }
+            let authStore = FileAuthStore()
 
             let volvo = VolvoCarsAPI(
                 clientID: options.clientID,
                 clientSecret: options.clientSecret,
                 apiKey: options.apiKey,
-                isDebugLoggingEnabled: options.verbose
+                isDebugLoggingEnabled: options.verbose,
+                authStore: authStore,
+                storageKey: "volvo-cli-token"
             )
-            await volvo.setToken(token)
+
+            // Check if token exists
+            if await authStore.authentication(for: "volvo-cli-token") == nil {
+                print("✗ No saved token found. Please authenticate first.")
+                throw ExitCode.failure
+            }
+
             return volvo
         }
     }
@@ -265,18 +272,23 @@ extension VolvoCarsAPICLT {
         }
 
         private func createAuthenticatedClient() async throws -> VolvoCarsAPI {
-            guard let token = try TokenStorage.load() else {
-                print("✗ No saved token found. Please authenticate first.")
-                throw ExitCode.failure
-            }
+            let authStore = FileAuthStore()
 
             let volvo = VolvoCarsAPI(
                 clientID: options.clientID,
                 clientSecret: options.clientSecret,
                 apiKey: options.apiKey,
-                isDebugLoggingEnabled: options.verbose
+                isDebugLoggingEnabled: options.verbose,
+                authStore: authStore,
+                storageKey: "volvo-cli-token"
             )
-            await volvo.setToken(token)
+
+            // Check if token exists
+            if await authStore.authentication(for: "volvo-cli-token") == nil {
+                print("✗ No saved token found. Please authenticate first.")
+                throw ExitCode.failure
+            }
+
             return volvo
         }
     }
@@ -338,18 +350,23 @@ extension VolvoCarsAPICLT {
         }
 
         private func createAuthenticatedClient() async throws -> VolvoCarsAPI {
-            guard let token = try TokenStorage.load() else {
-                print("✗ No saved token found. Please authenticate first.")
-                throw ExitCode.failure
-            }
+            let authStore = FileAuthStore()
 
             let volvo = VolvoCarsAPI(
                 clientID: options.clientID,
                 clientSecret: options.clientSecret,
                 apiKey: options.apiKey,
-                isDebugLoggingEnabled: options.verbose
+                isDebugLoggingEnabled: options.verbose,
+                authStore: authStore,
+                storageKey: "volvo-cli-token"
             )
-            await volvo.setToken(token)
+
+            // Check if token exists
+            if await authStore.authentication(for: "volvo-cli-token") == nil {
+                print("✗ No saved token found. Please authenticate first.")
+                throw ExitCode.failure
+            }
+
             return volvo
         }
     }
@@ -365,9 +382,11 @@ extension VolvoCarsAPICLT {
             abstract: "Remove saved authentication token."
         )
 
-        func run() throws {
-            if TokenStorage.exists() {
-                try TokenStorage.delete()
+        func run() async throws {
+            let authStore = FileAuthStore()
+
+            if await authStore.authentication(for: "volvo-cli-token") != nil {
+                try await authStore.storeAuthentication(token: nil, for: "volvo-cli-token")
                 print("✓ Logged out successfully")
             } else {
                 print("No saved token found")
